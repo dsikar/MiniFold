@@ -1,0 +1,103 @@
+2021.04.08
+Ran on intel devcloud:
+https://devcloud.intel.com/edge/advanced/connect_and_create/
+
+```
+$ git clone https://github.com/EricAlcaide/MiniFold
+$ pip3 install -r requirements.txt
+```
+There were a few versions that had to be bumped up, then above line repeated.
+Installed Julia:
+
+```
+$ wget https://julialang-s3.julialang.org/bin/linux/x64/1.0/julia-1.0.5-linux-x86_64.tar.gz
+$ tar xvf julia-1.0.5-linux-x86_64.tar.gz
+$ mv julia-1.0.5 .local/bin
+$ ln -s ~/.local/bin/julia-1.0.5/bin/julia ~/.local/bin/julia
+```
+At this point this script may run
+```
+$ julia
+julia> get_proteins_under_200aa.jl ../data/training_30.txt full_angles_under_200.txt
+```
+Note, best output to local file then move around. 
+Installed IJulia through the package manager:
+```
+julia> ]
+pkg> add IJulia
+```
+See https://github.com/JuliaLang/IJulia.jl for further info.
+From this point onwards it is possible to run an IJulia notebook kernel on the Intel DevCloud.
+
+The .ipynb files needed editing:
+```
+(...)
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (OpenVINO 2020.3.1 LTS)",
+   "language": "python",
+   "name": "c003-python_3_lts"
+(...)
+```
+The main change being "name": "python3" for "name": "c003-python_3_lts", otherwise notebook seems to run on python2.7.
+Same for IJulia, where, in julia_get_proteins_under_200aa.ipynb:
+```
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.9"
+```
+needs to be swapped for:
+```
+  "kernelspec": {
+   "display_name": "Julia 1.0.5",
+   "language": "julia",
+   "name": "julia-1.0"
+  },
+  "language_info": {
+   "file_extension": ".jl",
+   "mimetype": "application/julia",
+   "name": "julia",
+   "version": "1.0.5"
+```
+both get_proteins_under_200aa.jl and julia_get_proteins_under_200aa.ipynb will generate an output, although a diff shows they are not identical.
+When running angle_data_preparation_py.ipynb, using any of the two julia outputs, a change needs to be made to function parse_lines:
+```
+# Helper functions to extract numeric data from text
+def parse_lines(raw):
+    return np.array([[float(x) for x in line.split("\t") if x != ""] for line in raw])
+
+def parse_line(line):
+    return np.array([float(x) for x in line.split(" ") if x != ""])
+```
+Else a parsing error occurs. There is another error, no found yet, given the output:
+```
+# Ensure all features have same n. prots
+print("Names: ", len(names))
+print("Seqs: ", len(seqs))
+print("PSSMs: ", len(pssms))
+print("Phis: ", len(phis))
+print("Psis: ", len(psis))
+
+Names:  601
+Seqs:  600
+PSSMs:  600
+Phis:  0
+Psis:  0
+```
+So function parse_line possibly needs the right character to split the lines.
+Todo, write to author enquiring.
